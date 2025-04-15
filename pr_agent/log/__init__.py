@@ -4,7 +4,7 @@ import logging
 import sys
 from enum import Enum
 
-from loguru import logger, Record
+from loguru import logger
 
 ANALYTICS_FOLDER = os.getenv("ANALYTICS_FOLDER", "")
 os.environ["AUTO_CAST_FOR_DYNACONF"] = "false"
@@ -23,7 +23,7 @@ class LoggingFormat(str, Enum):
     JSON = "JSON"
 
 
-def json_format(record: Record) -> str:
+def json_format(record: dict) -> str:
     """
     Format a log record as a JSON string.
 
@@ -36,7 +36,7 @@ def json_format(record: Record) -> str:
     return record["message"]
 
 
-def analytics_filter(record: Record) -> bool:
+def analytics_filter(record: dict) -> bool:
     """
     Filter to only include analytics logs.
 
@@ -46,10 +46,10 @@ def analytics_filter(record: Record) -> bool:
     Returns:
         bool: True if the record is an analytics record, False otherwise.
     """
-    return record["extra"].get("analytics", False)
+    return record.get("analytics", False)
 
 
-def inv_analytics_filter(record: Record) -> bool:
+def inv_analytics_filter(record: dict) -> bool:
     """
     Filter to exclude analytics logs.
 
@@ -59,7 +59,7 @@ def inv_analytics_filter(record: Record) -> bool:
     Returns:
         bool: True if the record is NOT an analytics record, False otherwise.
     """
-    return not record["extra"].get("analytics", False)
+    return not record.get("analytics", False)
 
 
 def setup_logger(level: str = "INFO", fmt: LoggingFormat = LoggingFormat.CONSOLE):

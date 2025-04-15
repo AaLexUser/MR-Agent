@@ -7,6 +7,8 @@ from typing import Tuple
 from pr_agent.log import get_logger
 from pr_agent.types import FilePatchInfo
 
+MAX_FILES_ALLOWED_FULL = 50
+
 
 class GitProvider(ABC):
     """
@@ -20,19 +22,19 @@ class GitProvider(ABC):
     and authentication mechanisms.
     """
 
-    @abstractmethod
-    def is_supported(self, capability: str) -> bool:
-        """
-        Check if a specific capability is supported by this git provider.
+    # @abstractmethod
+    # def is_supported(self, capability: str) -> bool:
+    #     """
+    #     Check if a specific capability is supported by this git provider.
 
-        Args:
-            capability: String identifier of the capability to check.
-                        Examples might include 'pull_requests', 'issues', etc.
+    #     Args:
+    #         capability: String identifier of the capability to check.
+    #                     Examples might include 'pull_requests', 'issues', etc.
 
-        Returns:
-            bool: True if the capability is supported, False otherwise.
-        """
-        pass
+    #     Returns:
+    #         bool: True if the capability is supported, False otherwise.
+    #     """
+    #     pass
 
     def get_git_repo_url(self, issues_or_pr_url: str) -> str:
         """
@@ -166,50 +168,50 @@ class GitProvider(ABC):
         finally:
             return returned_obj
 
-    @abstractmethod
-    def get_files(self) -> list:
-        pass
+    # @abstractmethod
+    # def get_files(self) -> list:
+    #     pass
 
-    @abstractmethod
-    def get_diff_files(self) -> list[FilePatchInfo]:
-        pass
+    # @abstractmethod
+    # def get_diff_files(self) -> list[FilePatchInfo]:
+    #     pass
 
-    @abstractmethod
-    def publish_description(self, pr_title: str, pr_body: str):
-        pass
+    # @abstractmethod
+    # def publish_description(self, pr_title: str, pr_body: str):
+    #     pass
 
-    @abstractmethod
-    def publish_code_suggestions(self, code_suggestions: list) -> bool:
-        pass
+    # @abstractmethod
+    # def publish_code_suggestions(self, code_suggestions: list) -> bool:
+    #     pass
 
-    @abstractmethod
-    def get_languages(self):
-        pass
+    # @abstractmethod
+    # def get_languages(self):
+    #     pass
 
-    @abstractmethod
-    def get_pr_branch(self):
-        pass
+    # @abstractmethod
+    # def get_pr_branch(self):
+    #     pass
 
-    @abstractmethod
-    def get_user_id(self):
-        pass
+    # @abstractmethod
+    # def get_user_id(self):
+    #     pass
 
-    @abstractmethod
-    def get_pr_description_full(self) -> str:
-        pass
+    # @abstractmethod
+    # def get_pr_description_full(self) -> str:
+    #     pass
 
-    @abstractmethod
-    def edit_comment(self, comment, body: str):
-        pass
+    # @abstractmethod
+    # def edit_comment(self, comment, body: str):
+    #     pass
 
-    @abstractmethod
-    def edit_comment_from_comment_id(self, comment_id: int, body: str):
-        pass
+    # @abstractmethod
+    # def edit_comment_from_comment_id(self, comment_id: int, body: str):
+    #     pass
 
-    @abstractmethod
-    def get_comment_body_from_comment_id(self, comment_id: int) -> str:
-        pass
+    # @abstractmethod
+    # def get_comment_body_from_comment_id(self, comment_id: int) -> str:
+    #     pass
 
-    @abstractmethod
-    def reply_to_comment_from_comment_id(self, comment_id: int, body: str):
-        pass
+    # @abstractmethod
+    # def reply_to_comment_from_comment_id(self, comment_id: int, body: str):
+    #     pass
