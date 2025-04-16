@@ -1,6 +1,7 @@
 import os
 import traceback
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Iterator
+from datetime import datetime
 from urllib.parse import urlparse
 import re
 
@@ -15,7 +16,7 @@ from pr_agent.algo.utils import load_large_diff
 class GithubProvider(GitProvider):
     def __init__(
         self,
-        pr_url: str,
+        repo_url: str,
         include: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
     ):
@@ -25,14 +26,8 @@ class GithubProvider(GitProvider):
         self.include = include or []
 
         self.client = self._create_client(self.base_url)
-        self.repo_name, self.pr_number = self._parse_pr_url(pr_url)
+        self.repo_name = self._parse_repo_url(repo_url)
         self.repo = self.client.get_repo(self.repo_name)
-        self.pr = self.repo.get_pull(self.pr_number)
-        self.pr_commits = list(self.pr.get_commits())
-        self.last_commit = self.pr_commits[-1]
-        self.pr_url = self.get_pr_url()
-        self.files = list(self.pr.get_files())
-        self.diff_files: List[FilePatchInfo] = self.get_diff_files()
 
     def get_pr_url(self) -> str:
         return self.pr.html_url
@@ -47,6 +42,21 @@ class GithubProvider(GitProvider):
             return Github(auth=auth, base_url=base_url)
         else:
             raise ValueError("Could not authenticate to GitHub")
+
+    @staticmethod
+    def _parse_repo_url(pr_url: str) -> Tuple[str, int]:
+        parsed_url = urlparse(pr_url)
+
+        if parsed_url.path.startswith("/api/v3"):
+            parsed_url = urlparse(pr_url.replace("/api/v3", ""))
+
+        path_parts = parsed_url.path.strip("/").split("/")
+        print(path_parts)
+        if len(path_parts) < 2:
+            raise ValueError("The provided URL does not appear to be a GitHub URL")
+
+        repo_name = "/".join(path_parts[:2])
+        return repo_name
 
     @staticmethod
     def _parse_pr_url(pr_url: str) -> Tuple[str, int]:
@@ -91,23 +101,31 @@ class GithubProvider(GitProvider):
             file_content = ""
         return file_content
 
-    def get_diff_files(self) -> list[FilePatchInfo]:
+    def get_diff_files(self, pr_url: str) -> list[FilePatchInfo]:
+        repo_name, pr_number = self._parse_pr_url(pr_url)
+        if repo_name != self.repo_name:
+            raise ValueError(
+                "The provided URL does not appear to be a GitHub PR URL for this repository"
+            )
+        repo = self.client.get_repo(repo_name)
+        pr = repo.get_pull(pr_number)
+        files = list(pr.get_files())
         try:
             diff_files = []
             try:
-                compare = self.repo.compare(self.pr.base.sha, self.pr.head.sha)
+                compare = repo.compare(pr.base.sha, pr.head.sha)
                 merge_base_commit = compare.merge_base_commit
             except Exception as e:
                 get_logger().error(f"Failed to get merge base commit: {e}")
-                merge_base_commit = self.pr.base
-            if merge_base_commit.sha != self.pr.base.sha:
+                merge_base_commit = pr.base
+            if merge_base_commit.sha != pr.base.sha:
                 get_logger().info(
                     f"Using merge base commit {merge_base_commit.sha} instead of base commit "
                 )
             processed_file_count = 0
             filtered_files = [
                 file
-                for file in self.files
+                for file in files
                 if (
                     not self.include
                     or any(
@@ -191,7 +209,12 @@ class GithubProvider(GitProvider):
             )
             raise e
 
-    def get_closed_prs(self, author: str = None, since=None, until=None) -> List[str]:
+    def get_closed_prs(
+        self,
+        author: Optional[str] = None,
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
+    ) -> Iterator[str]:
         """Get closed PRs for a repository, optionally filtered by author and date range.
 
         Args:
@@ -202,3 +225,11 @@ class GithubProvider(GitProvider):
         Returns:
             List of PR URLs
         """
+        prs = list(self.repo.get_pulls(state="closed", head=author, sort="updated", direction="desc"))
+        for pr in prs:
+            if pr.closed_at:
+                if since and pr.closed_at < since:
+                    continue
+                if until and pr.closed_at > until:
+                    continue
+                yield pr.html_url

@@ -7,7 +7,7 @@ from pr_agent.log import get_logger
 from pr_agent.utils import load_config
 from pr_agent.git_providers import get_git_provider
 from rich import print as rprint
-
+from datetime import datetime
 logger = get_logger()
 
 
@@ -32,7 +32,7 @@ def time_block(description: str, timer: TimingContext):
 
 
 def run_review(
-    pr_url: str,
+    repo_url: str,
     config_path: Annotated[
         Optional[str],
         typer.Option(
@@ -51,6 +51,14 @@ def run_review(
         Optional[str],
         typer.Option("--author", "-a", help="Filter PRs by author"),
     ] = None,
+    since: Annotated[
+        Optional[str],
+        typer.Option("--since", "-s", help="Filter PRs by since date"),
+    ] = None,
+    until: Annotated[
+        Optional[str],
+        typer.Option("--until", "-u", help="Filter PRs by until date"),
+    ] = None,
 ):
     start_time = time.time()
     logger.info(f"Starting review of PR {pr_url}")
@@ -62,19 +70,19 @@ def run_review(
         raise
 
     timer = TimingContext(start_time=start_time)
-    # TODO: get all closed PRs in the period by author ... and repo ...
-    for pr_url in pr_urls:
+    git_provider = get_git_provider(
+        repo_url,
+        config.git_provider.include,
+        config.git_provider.exclude,
+    )
     with time_block("Fetching PR files", timer):
-        git_provider = get_git_provider(
-            config.git_provider.name,
-            pr_url,
-            config.git_provider.include,
-            config.git_provider.exclude,
-        )  # type: ignore
-        rprint("[green]PR loaded![/green]")
-        # TODO: get diff files in PR
-        diff_files = git_provider.get_diff_files()
+        since_date = datetime.strptime(since, "%Y-%m-%d") if since else None
+        until_date = datetime.strptime(until, "%Y-%m-%d") if until else None
+        for pr_url in git_provider.get_closed_prs(author, since_date, until_date):
+            diff_files = git_provider.get_diff_files(pr_url)
+            
         # TODO: process diff files
+
 
 def main():
     app = typer.Typer()

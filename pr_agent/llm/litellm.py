@@ -65,6 +65,31 @@ def _get_non_retryable_exceptions() -> tuple:
     return tuple(base_exceptions)
 
 
+def clip_text(
+    text: str,
+    model: str = "openai/gpt-4o",
+    max_tokens: Optional[int] = None,
+    trim_ratio: float = 0.75,
+) -> str:
+    if max_tokens is None:
+        if model in litellm.model_cost:
+            max_tokens_for_model = litellm.model_cost[model].get(
+                "max_input_tokens", litellm.model_cost[model]["max_tokens"]
+            )
+            max_tokens = int(max_tokens_for_model * trim_ratio)
+        else:
+            # if user did not specify max (input) tokens
+            # or passed an llm litellm does not know
+            # do nothing, just return text
+            return text
+    max_tokens = int(trim_ratio * max_tokens)
+    tokens = litellm.utils.token_counter(model=model, text=text)
+    if tokens <= max_tokens:
+        return text
+    else:
+        return text[:max_tokens]
+
+
 def trim_messages(
     messages: list[dict],
     model: str = "openai/gpt-4o",
@@ -239,6 +264,13 @@ class LiteLLMModel:
 
     def __repr__(self):
         return f"LiteLLMModel(model={self.model}, base_url={self.base_url})"
+
+    def count_tokens(
+        self, messages: List | None = None, text: str | List[str] | None = None
+    ) -> int:
+        return litellm.utils.token_counter(
+            model=self.model, messages=messages, text=text
+        )
 
     @overload
     def create(

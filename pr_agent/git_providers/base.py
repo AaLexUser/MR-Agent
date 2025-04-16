@@ -2,89 +2,31 @@ import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Tuple, Optional
+from datetime import datetime
+from typing import Iterator
 
 from pr_agent.log import get_logger
 from pr_agent.types import FilePatchInfo
+
 
 MAX_FILES_ALLOWED_FULL = 50
 
 
 class GitProvider(ABC):
-    """
-    Abstract base class for Git providers (GitHub, GitLab, BitBucket, etc.).
+    
+    @abstractmethod
+    def get_closed_prs(
+        self,
+        author: Optional[str] = None,
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
+    ) -> Iterator[str]:
+        pass
 
-    This class defines the interface that all git provider implementations
-    must adhere to. It provides methods to interact with repositories, PRs,
-    and issues across different git hosting platforms.
-
-    Implementations should handle the specifics of each git provider's API
-    and authentication mechanisms.
-    """
-
-    # @abstractmethod
-    # def is_supported(self, capability: str) -> bool:
-    #     """
-    #     Check if a specific capability is supported by this git provider.
-
-    #     Args:
-    #         capability: String identifier of the capability to check.
-    #                     Examples might include 'pull_requests', 'issues', etc.
-
-    #     Returns:
-    #         bool: True if the capability is supported, False otherwise.
-    #     """
-    #     pass
-
-    def get_git_repo_url(self, issues_or_pr_url: str) -> str:
-        """
-        Given a URL from an issue or pull request/merge request, extracts and returns the corresponding Git repository URL.
-
-        Args:
-            issues_or_pr_url (str): URL of an issue or pull/merge request from the repository
-
-        Returns:
-            str: The .git URL of the repository. Returns empty string if not implemented.
-
-        Notes:
-            This is an abstract method that needs to be implemented by specific Git provider classes.
-        """
-
-        get_logger().warning("Not implemented! Returning empty url")
-        return ""
-
-    def get_canonical_url_parts(
-        self, repo_git_url: str, desired_branch: str
-    ) -> Tuple[str, str]:
-        """
-        Get the canonical URL prefix and suffix for viewing files in a given repository.
-
-        This method splits a repository URL into prefix and suffix components needed to construct
-        canonical URLs for viewing files in that repository.
-
-        Args:
-            repo_git_url (str): The Git repository URL (e.g. https://git_provider.com/MY_PROJECT/MY_REPO.git)
-            desired_branch (str): The branch name to use in the URL
-
-        Returns:
-            Tuple[str, str]: A tuple containing:
-                - prefix (str): The URL prefix before the file path
-                - suffix (str): The URL suffix after the file path
-
-        Example:
-            For inputs:
-                repo_git_url = "https://git_provider.com/MY_PROJECT/MY_REPO.git"
-                desired_branch = "main"
-
-            Returns:
-                ("https://git_provider.com/projects/MY_PROJECT/repos/MY_REPO/browse/main", "?raw")
-
-            Which allows constructing file URLs like:
-            {prefix}/docs/readme.md{suffix}
-        """
-
-        get_logger().warning("Not implemented! Returning empty prefix and suffix")
-        return ("", "")
+    @abstractmethod
+    def get_diff_files(self, pr_url: str) -> list[FilePatchInfo]:
+        pass
 
     # Clone related API
     # An object which ensures deletion of a cloned repo, once it becomes out of scope.
